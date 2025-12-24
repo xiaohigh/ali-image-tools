@@ -205,7 +205,7 @@ export default function LogoRemovePage() {
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
             <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
               <Zap className="h-5 w-5 text-white" />
             </div>
@@ -213,9 +213,9 @@ export default function LogoRemovePage() {
               <h1 className="text-base font-semibold">Logo 去除工具</h1>
               <p className="text-xs text-zinc-500">一键去除 AI 生成图片水印</p>
             </div>
-          </div>
+          </Link>
           <Link href="/" className="text-sm text-zinc-400 hover:text-white transition-colors">
-            返回编辑器
+            返回首页
           </Link>
         </div>
       </header>
