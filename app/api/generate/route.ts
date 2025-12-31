@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import path from 'path';
-import dotenv from 'dotenv';
 
-// Force load .env
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+export const runtime = 'edge';
 
 const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY;
 

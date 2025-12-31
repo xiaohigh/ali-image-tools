@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import dotenv from 'dotenv';
-import path from 'path';
 
-// Load environment variables
-dotenv.config({ path: path.resolve(process.cwd(), '.env') });
-dotenv.config({ path: path.resolve(process.cwd(), '.env.local') });
+export const runtime = 'edge';
 
 export async function GET(
   request: NextRequest,
