@@ -47,7 +47,7 @@ function ImageUploadCard({ index, currentUrl, onUpdate, onRemove, canRemove }: {
   canRemove: boolean;
 }) {
   const [preview, setPreview] = useState(currentUrl);
-  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
 
   // Sync preview with external URL changes (e.g., from Ctrl+V paste)
@@ -57,36 +57,28 @@ function ImageUploadCard({ index, currentUrl, onUpdate, onRemove, canRemove }: {
     }
   }, [currentUrl]);
 
-  const uploadFile = async (file: File) => {
+  const processFile = (file: File) => {
+    setLoading(true);
     const reader = new FileReader();
-    reader.onload = (ev) => { if (ev.target?.result) setPreview(ev.target.result as string); };
-    reader.readAsDataURL(file);
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        onUpdate(data.url);
-        toast.success('图片上传成功');
-      } else {
-        toast.error(`上传失败: ${data.error || '未知错误'}`);
-        setPreview('');
-        onUpdate('');
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
+        setPreview(dataUrl);
+        onUpdate(dataUrl); // Store the Base64 data URL directly
+        toast.success('图片已加载');
       }
-    } catch {
-      toast.error('上传出错');
-    } finally {
-      setUploading(false);
-    }
+      setLoading(false);
+    };
+    reader.onerror = () => {
+      toast.error('读取图片失败');
+      setLoading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile(file);
+    if (file) processFile(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -94,7 +86,7 @@ function ImageUploadCard({ index, currentUrl, onUpdate, onRemove, canRemove }: {
     setIsDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      uploadFile(file);
+      processFile(file);
     }
   };
 
@@ -118,17 +110,17 @@ function ImageUploadCard({ index, currentUrl, onUpdate, onRemove, canRemove }: {
         <img src={preview} alt={`图片 ${index + 1}`} className="w-full h-full object-cover" />
       ) : (
         <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-zinc-700/50 transition-colors">
-          {uploading ? (
+          {loading ? (
             <Loader2 className="h-4 w-4 text-zinc-400 animate-spin" />
           ) : (
             <Upload className="h-4 w-4 text-zinc-500" />
           )}
-          <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={uploading} />
+          <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={loading} />
         </label>
       )}
       
       {/* Upload overlay for replacing */}
-      {preview && !uploading && (
+      {preview && !loading && (
         <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center cursor-pointer z-10">
           <span className="text-white text-[10px]">更换</span>
           <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
@@ -196,28 +188,27 @@ export default function Home() {
     // Find first empty slot or add new
     const emptyIndex = imageInputs.findIndex(i => !i.url.trim());
     
-    // Create preview and upload
-    const formData = new FormData();
-    formData.append('file', file);
-    
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (res.ok && data.url) {
+    // Convert to Base64 data URL
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
         if (emptyIndex >= 0) {
-          updateImageUrl(emptyIndex, data.url);
+          updateImageUrl(emptyIndex, dataUrl);
         } else {
-          setImageInputs(prev => [...prev, { id: Date.now().toString(), url: data.url }]);
+          setImageInputs(prev => [...prev, { id: Date.now().toString(), url: dataUrl }]);
         }
-        toast.success('图片粘贴上传成功');
+        toast.success('图片已粘贴');
       } else {
-        toast.error(`上传失败: ${data.error || '未知错误'}`);
         uploadedHashesRef.current.delete(hash);
+        toast.error('读取图片失败');
       }
-    } catch {
-      toast.error('上传出错');
+    };
+    reader.onerror = () => {
       uploadedHashesRef.current.delete(hash);
-    }
+      toast.error('读取图片失败');
+    };
+    reader.readAsDataURL(file);
   };
 
   // Global paste event listener - only when prompt textarea is focused

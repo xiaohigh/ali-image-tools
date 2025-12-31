@@ -48,46 +48,38 @@ function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
 
 // --- Main Page Component ---
 export default function LogoRemovePage() {
-  const [uploadedUrl, setUploadedUrl] = useState<string>('');
+  const [imageData, setImageData] = useState<string>(''); // Base64 data URL
   const [preview, setPreview] = useState<string>('');
-  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
   
-  const [loading, setLoading] = useState(false);
+  const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
 
-  const uploadFile = async (file: File) => {
+  const processFile = (file: File) => {
+    setLoading(true);
     const reader = new FileReader();
-    reader.onload = (ev) => { if (ev.target?.result) setPreview(ev.target.result as string); };
-    reader.readAsDataURL(file);
-
-    setUploading(true);
-    const formData = new FormData();
-    formData.append('file', file);
-
-    try {
-      const res = await fetch('/api/upload', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (res.ok && data.url) {
-        setUploadedUrl(data.url);
-        toast.success('图片上传成功');
-      } else {
-        toast.error(`上传失败: ${data.error || '未知错误'}`);
-        setPreview('');
-        setUploadedUrl('');
+    reader.onload = (ev) => {
+      const dataUrl = ev.target?.result as string;
+      if (dataUrl) {
+        setPreview(dataUrl);
+        setImageData(dataUrl); // Store the Base64 data URL directly
+        toast.success('图片已加载');
       }
-    } catch {
-      toast.error('上传出错');
-    } finally {
-      setUploading(false);
-    }
+      setLoading(false);
+    };
+    reader.onerror = () => {
+      toast.error('读取图片失败');
+      setLoading(false);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) uploadFile(file);
+    if (file) processFile(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -95,7 +87,7 @@ export default function LogoRemovePage() {
     setIsDragOver(false);
     const file = e.dataTransfer.files?.[0];
     if (file && file.type.startsWith('image/')) {
-      uploadFile(file);
+      processFile(file);
     }
   };
 
@@ -117,7 +109,7 @@ export default function LogoRemovePage() {
           const file = item.getAsFile();
           if (file) {
             e.preventDefault();
-            uploadFile(file);
+            processFile(file);
             return;
           }
         }
@@ -142,7 +134,7 @@ export default function LogoRemovePage() {
 
   const clearImage = () => {
     setPreview('');
-    setUploadedUrl('');
+    setImageData('');
     setResults([]);
   };
 
@@ -150,18 +142,19 @@ export default function LogoRemovePage() {
     const preset = LOGO_PRESETS.find(p => p.id === presetId);
     if (!preset) return;
 
-    if (!uploadedUrl) { 
+    if (!imageData) { 
       toast.error('请先上传一张图片'); 
       return; 
     }
 
     setSelectedPreset(presetId);
-    setLoading(true);
+    setGenerating(true);
     setResults([]);
     toast.info(`开始去除 ${preset.name} Logo...`);
 
     try {
-      const content: ({ image: string } | { text: string })[] = [{ image: uploadedUrl }, { text: preset.prompt }];
+      // Use Base64 data URL directly
+      const content: ({ image: string } | { text: string })[] = [{ image: imageData }, { text: preset.prompt }];
 
       const body = {
         model: 'qwen-image-edit-plus',
@@ -194,7 +187,7 @@ export default function LogoRemovePage() {
     } catch (err: any) {
       toast.error(`错误: ${err.message}`);
     } finally {
-      setLoading(false);
+      setGenerating(false);
     }
   };
 
@@ -251,10 +244,10 @@ export default function LogoRemovePage() {
                 </div>
               ) : (
                 <label className="cursor-pointer text-center p-8">
-                  {uploading ? (
+                  {loading ? (
                     <div className="flex flex-col items-center">
                       <Loader2 className="h-12 w-12 text-zinc-400 animate-spin mb-4" />
-                      <p className="text-zinc-400">上传中...</p>
+                      <p className="text-zinc-400">加载中...</p>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center">
@@ -263,7 +256,7 @@ export default function LogoRemovePage() {
                       <p className="text-zinc-500 text-sm">或点击选择文件 · 支持 Ctrl+V 粘贴</p>
                     </div>
                   )}
-                  <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={uploading} />
+                  <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={loading} />
                 </label>
               )}
             </div>
@@ -273,7 +266,7 @@ export default function LogoRemovePage() {
           <div className="flex-1 flex flex-col">
             <h2 className="text-sm text-zinc-400 mb-3">处理结果</h2>
             <div className="flex-1 rounded-xl border border-zinc-700 bg-zinc-800/30 flex items-center justify-center overflow-hidden">
-              {loading ? (
+              {generating ? (
                 <div className="text-center">
                   <div className="h-12 w-12 rounded-full border-4 border-zinc-700 border-t-violet-500 animate-spin mx-auto" />
                   <p className="mt-4 text-zinc-400">正在去除 Logo...</p>
@@ -309,12 +302,12 @@ export default function LogoRemovePage() {
             <Button
               key={preset.id}
               onClick={() => handleGenerate(preset.id)}
-              disabled={loading || !uploadedUrl}
+              disabled={generating || !imageData}
               className={`bg-gradient-to-r ${preset.color} hover:opacity-90 text-white px-8 py-6 text-lg shadow-lg transition-all disabled:opacity-50 ${
-                loading && selectedPreset === preset.id ? 'opacity-70' : ''
+                generating && selectedPreset === preset.id ? 'opacity-70' : ''
               }`}
             >
-              {loading && selectedPreset === preset.id ? (
+              {generating && selectedPreset === preset.id ? (
                 <Loader2 className="mr-2 h-5 w-5 animate-spin" />
               ) : (
                 <Sparkles className="mr-2 h-5 w-5" />
