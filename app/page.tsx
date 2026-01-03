@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { Sparkles, Wand2, Zap, ImageIcon } from 'lucide-react';
+import { Sparkles, Wand2, Zap, ImageIcon, Settings } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 const FEATURES = [
@@ -89,14 +89,23 @@ export default function HomePage() {
 
       {/* Header */}
       <header className="border-b border-zinc-800 bg-zinc-900/80 backdrop-blur-md relative z-10">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 flex items-center justify-center">
-            <ImageIcon className="h-6 w-6 text-white" />
+        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-violet-500 via-indigo-500 to-purple-600 flex items-center justify-center">
+              <ImageIcon className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h1 className="text-lg font-semibold">神机营 - 图片编辑器</h1>
+              <p className="text-xs text-zinc-500">Powered by Aliyun DashScope</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-lg font-semibold">AI 图片工具箱</h1>
-            <p className="text-xs text-zinc-500">Powered by Aliyun DashScope</p>
-          </div>
+          <Link 
+            href="/settings" 
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors"
+          >
+            <Settings className="h-4 w-4" />
+            <span className="text-sm">设置</span>
+          </Link>
         </div>
       </header>
 
@@ -146,10 +155,6 @@ export default function HomePage() {
             })}
           </div>
 
-          {/* Footer hint */}
-          <p className="text-center text-zinc-600 text-sm mt-12">
-            所有功能均基于阿里云通义大模型
-          </p>
         </div>
       </main>
 
