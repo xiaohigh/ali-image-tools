@@ -68,16 +68,18 @@ export default function TextToImagePage() {
     }
   };
 
-  const pollTaskStatus = async (taskId: string): Promise<string[]> => {
+  const pollTaskStatus = async (taskId: string, apiKey: string): Promise<string[]> => {
     const maxAttempts = 120; // 4 minutes max
     let attempts = 0;
 
     while (attempts < maxAttempts) {
       attempts++;
       setProgress(`生成中... (${Math.floor(attempts * 2)}秒)`);
-      
+
       try {
-        const res = await fetch(`/api/task/${taskId}`);
+        const res = await fetch(`/api/task/${taskId}`, {
+          headers: { 'X-API-Key': apiKey }
+        });
         const data = await res.json();
 
         if (!res.ok) {
@@ -85,12 +87,12 @@ export default function TextToImagePage() {
         }
 
         const status = data.output?.task_status;
-        
+
         if (status === 'SUCCEEDED') {
           // Images are in output.choices[].message.content[].image
           const choices = data.output?.choices || [];
           const images: string[] = [];
-          
+
           for (const choice of choices) {
             const content = choice.message?.content || [];
             for (const item of content) {
@@ -99,15 +101,15 @@ export default function TextToImagePage() {
               }
             }
           }
-          
+
           return images;
         } else if (status === 'FAILED') {
           throw new Error(data.output?.message || '任务执行失败');
         }
-        
+
         // Wait 2 seconds before next poll
         await new Promise(resolve => setTimeout(resolve, 2000));
-      } catch (error: any) {
+      } catch (error: unknown) {
         throw error;
       }
     }
@@ -121,6 +123,13 @@ export default function TextToImagePage() {
       return;
     }
 
+    // 从 localStorage 读取 API Key
+    const apiKey = localStorage.getItem('dashscopeApiKey');
+    if (!apiKey) {
+      toast.error('请先在设置页面配置 API Key');
+      return;
+    }
+
     setLoading(true);
     setResults([]);
     setProgress('提交任务中...');
@@ -129,12 +138,13 @@ export default function TextToImagePage() {
       const submitRes = await fetch('/api/text-to-image', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt, 
+        body: JSON.stringify({
+          prompt,
           negative_prompt: negativePrompt || undefined,
           model: selectedModel,
-          size, 
-          n: numImages 
+          size,
+          n: numImages,
+          apiKey // 传递 API Key
         })
       });
 
@@ -151,7 +161,7 @@ export default function TextToImagePage() {
 
       toast.info('任务已提交，正在生成...');
 
-      const images = await pollTaskStatus(taskId);
+      const images = await pollTaskStatus(taskId, apiKey);
       
       if (images.length > 0) {
         setResults(images);

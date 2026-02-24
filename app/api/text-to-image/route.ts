@@ -3,14 +3,16 @@ import { NextRequest, NextResponse } from 'next/server';
 export const runtime = 'edge';
 
 export async function POST(request: NextRequest) {
-  const DASHSCOPE_API_KEY = process.env.DASHSCOPE_API_KEY;
-  
-  if (!DASHSCOPE_API_KEY) {
-    return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
-  }
-
   try {
     const body = await request.json();
+
+    // 支持从前端传入 API Key
+    const apiKey = body.apiKey || request.headers.get('X-API-Key') || process.env.DASHSCOPE_API_KEY;
+
+    if (!apiKey) {
+      return NextResponse.json({ error: '请先在设置页面配置 API Key' }, { status: 401 });
+    }
+
     const { prompt, model = 'wanx2.1-t2i-turbo', size = '1024*1024', n = 1, negative_prompt } = body;
 
     if (!prompt) {
@@ -18,11 +20,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Build parameters
-    const parameters: any = {
+    const parameters: Record<string, unknown> = {
       n,
       size,
     };
-    
+
     if (negative_prompt) {
       parameters.negative_prompt = negative_prompt;
     }
@@ -32,7 +34,7 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DASHSCOPE_API_KEY}`,
+        'Authorization': `Bearer ${apiKey}`,
         'X-DashScope-Async': 'enable'
       },
       body: JSON.stringify({
@@ -50,19 +52,20 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await response.json();
-    
+
     if (!response.ok) {
       return NextResponse.json({ error: data.message || 'Failed to submit task' }, { status: response.status });
     }
 
     // Return task_id for polling
-    return NextResponse.json({ 
+    return NextResponse.json({
       task_id: data.output?.task_id,
       status: data.output?.task_status
     });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Text-to-image error:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
