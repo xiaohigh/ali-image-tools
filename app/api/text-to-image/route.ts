@@ -65,12 +65,7 @@ export async function POST(request: NextRequest) {
 
   } catch (error: unknown) {
     console.error('Text-to-image error:', error);
-    const errorInfo = {
-      message: error instanceof Error ? error.message : 'Unknown error',
-      name: error instanceof Error ? error.name : 'Unknown',
-      stack: error instanceof Error ? error.stack : undefined,
-      timestamp: new Date().toISOString()
-    };
-    return NextResponse.json({ error: errorInfo }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

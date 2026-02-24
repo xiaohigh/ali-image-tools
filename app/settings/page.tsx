@@ -106,22 +106,16 @@ export default function SettingsPage() {
         body: JSON.stringify({ apiKey })
       });
 
-      const data = await response.json();
-
-      if (response.ok && data.success) {
+      if (response.ok) {
         setTestResult('success');
         toast.success('API 连接测试成功');
       } else {
         setTestResult('error');
-        // 显示详细错误信息
-        const errorMsg = data.details || data.error || '未知错误';
-        console.error('测试失败详情:', data);
-        toast.error(`失败: ${errorMsg}`, { duration: 5000 });
+        toast.error('API 连接测试失败');
       }
-    } catch (err) {
+    } catch {
       setTestResult('error');
-      console.error('网络错误:', err);
-      toast.error(`网络错误: ${err instanceof Error ? err.message : '未知'}`);
+      toast.error('网络错误');
     } finally {
       setTesting(false);
     }
