@@ -100,23 +100,28 @@ export default function SettingsPage() {
     setTestResult(null);
 
     try {
-      // Simple test - check if the API key format is valid
       const response = await fetch('/api/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ apiKey })
       });
 
-      if (response.ok) {
+      const data = await response.json();
+
+      if (response.ok && data.success) {
         setTestResult('success');
         toast.success('API 连接测试成功');
       } else {
         setTestResult('error');
-        toast.error('API 连接测试失败');
+        // 显示详细错误信息
+        const errorMsg = data.details || data.error || '未知错误';
+        console.error('测试失败详情:', data);
+        toast.error(`失败: ${errorMsg}`, { duration: 5000 });
       }
-    } catch {
+    } catch (err) {
       setTestResult('error');
-      toast.error('网络错误');
+      console.error('网络错误:', err);
+      toast.error(`网络错误: ${err instanceof Error ? err.message : '未知'}`);
     } finally {
       setTesting(false);
     }
