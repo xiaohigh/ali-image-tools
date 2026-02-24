@@ -1,8 +1,8 @@
 import type { NextConfig } from "next";
 
-const nextConfig: any = {
+const nextConfig: NextConfig = {
   /* config options here */
-  output: 'standalone', // Required for Electron production build
+  // output: 'standalone', // Electron 打包时取消注释，Cloudflare Pages 部署时必须注释掉
   eslint: {
     ignoreDuringBuilds: true,
   },
