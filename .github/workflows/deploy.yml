@@ -3,6 +3,7 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches:
+      - master  # 改为你的实际分支名
       - main
   workflow_dispatch:
 

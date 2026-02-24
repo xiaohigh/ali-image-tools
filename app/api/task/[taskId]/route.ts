@@ -33,7 +33,12 @@ export async function GET(
 
   } catch (error: unknown) {
     console.error('Task status error:', error);
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return NextResponse.json({ error: message }, { status: 500 });
+    const errorInfo = {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      name: error instanceof Error ? error.name : 'Unknown',
+      stack: error instanceof Error ? error.stack : undefined,
+      timestamp: new Date().toISOString()
+    };
+    return NextResponse.json({ error: errorInfo }, { status: 500 });
   }
 }
