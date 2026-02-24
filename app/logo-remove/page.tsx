@@ -46,6 +46,14 @@ function Lightbox({ src, onClose }: { src: string; onClose: () => void }) {
   );
 }
 
+// --- Available Models ---
+const AVAILABLE_MODELS = [
+  { value: 'qwen-image-edit-plus', label: 'qwen-image-edit-plus (推荐)' },
+  { value: 'qwen-image-edit', label: 'qwen-image-edit' },
+  { value: 'qwen-image-edit-plus-2025-12-15', label: 'qwen-image-edit-plus-2025-12-15' },
+  { value: 'qwen-image-edit-plus-2025-10-30', label: 'qwen-image-edit-plus-2025-10-30' },
+];
+
 // --- Main Page Component ---
 export default function LogoRemovePage() {
   const [imageData, setImageData] = useState<string>(''); // Base64 data URL
@@ -53,7 +61,14 @@ export default function LogoRemovePage() {
   const [loading, setLoading] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<string | null>(null);
-  
+  const [selectedModel, setSelectedModel] = useState(() => {
+    // 从 localStorage 读取用户设置的默认模型
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('defaultModel') || 'qwen-image-edit-plus';
+    }
+    return 'qwen-image-edit-plus';
+  });
+
   const [generating, setGenerating] = useState(false);
   const [results, setResults] = useState<string[]>([]);
   const [lightboxSrc, setLightboxSrc] = useState<string | null>(null);
@@ -142,9 +157,16 @@ export default function LogoRemovePage() {
     const preset = LOGO_PRESETS.find(p => p.id === presetId);
     if (!preset) return;
 
-    if (!imageData) { 
-      toast.error('请先上传一张图片'); 
-      return; 
+    if (!imageData) {
+      toast.error('请先上传一张图片');
+      return;
+    }
+
+    // 从 localStorage 读取 API Key
+    const apiKey = localStorage.getItem('dashscopeApiKey');
+    if (!apiKey) {
+      toast.error('请先在设置页面配置 API Key');
+      return;
     }
 
     setSelectedPreset(presetId);
@@ -157,9 +179,10 @@ export default function LogoRemovePage() {
       const content: ({ image: string } | { text: string })[] = [{ image: imageData }, { text: preset.prompt }];
 
       const body = {
-        model: 'qwen-image-edit-plus',
+        model: selectedModel,  // 使用用户选择的模型
         input: { messages: [{ role: "user", content }] },
-        parameters: { n: 1 }
+        parameters: { n: 1 },
+        apiKey // 传递 API Key
       };
 
       const res = await fetch('/api/generate', {
@@ -296,25 +319,40 @@ export default function LogoRemovePage() {
           </div>
         </div>
 
-        {/* Bottom: Logo Type Buttons */}
-        <div className="flex items-center justify-center gap-4 mt-6">
-          {LOGO_PRESETS.map(preset => (
-            <Button
-              key={preset.id}
-              onClick={() => handleGenerate(preset.id)}
-              disabled={generating || !imageData}
-              className={`bg-gradient-to-r ${preset.color} hover:opacity-90 text-white px-8 py-6 text-lg shadow-lg transition-all disabled:opacity-50 ${
-                generating && selectedPreset === preset.id ? 'opacity-70' : ''
-              }`}
+        {/* Bottom: Model Selector + Logo Type Buttons */}
+        <div className="flex flex-col items-center gap-4 mt-6">
+          {/* Model Selector */}
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-zinc-400">模型：</span>
+            <select
+              value={selectedModel}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              className="h-9 px-3 rounded-lg bg-zinc-800 border border-zinc-700 text-sm text-white focus:outline-none focus:ring-2 focus:ring-rose-500/50"
             >
-              {generating && selectedPreset === preset.id ? (
-                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-              ) : (
-                <Sparkles className="mr-2 h-5 w-5" />
-              )}
-              去除 {preset.name} Logo
-            </Button>
-          ))}
+              {AVAILABLE_MODELS.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+            </select>
+          </div>
+
+          {/* Logo Type Buttons */}
+          <div className="flex items-center justify-center gap-4">
+            {LOGO_PRESETS.map(preset => (
+              <Button
+                key={preset.id}
+                onClick={() => handleGenerate(preset.id)}
+                disabled={generating || !imageData}
+                className={`bg-gradient-to-r ${preset.color} hover:opacity-90 text-white px-8 py-6 text-lg shadow-lg transition-all disabled:opacity-50 ${
+                  generating && selectedPreset === preset.id ? 'opacity-70' : ''
+                }`}
+              >
+                {generating && selectedPreset === preset.id ? (
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-5 w-5" />
+                )}
+                去除 {preset.name} Logo
+              </Button>
+            ))}
+          </div>
         </div>
       </main>
     </div>

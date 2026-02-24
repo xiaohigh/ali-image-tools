@@ -152,7 +152,13 @@ export default function Home() {
   const [negativePrompt, setNegativePrompt] = useState('');
   const [numImages, setNumImages] = useState(1);
   const [watermark, setWatermark] = useState(false);
-  const [selectedModel, setSelectedModel] = useState(AVAILABLE_MODELS[0].value);
+  const [selectedModel, setSelectedModel] = useState(() => {
+    // 从 localStorage 读取用户设置的默认模型
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('defaultModel') || AVAILABLE_MODELS[0].value;
+    }
+    return AVAILABLE_MODELS[0].value;
+  });
   
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<string[]>([]);
@@ -255,6 +261,13 @@ export default function Home() {
     if (validUrls.length === 0) { toast.error('请至少添加一张图片'); return; }
     if (!prompt.trim()) { toast.error('请输入编辑指令'); return; }
 
+    // 从 localStorage 读取 API Key
+    const apiKey = localStorage.getItem('dashscopeApiKey');
+    if (!apiKey) {
+      toast.error('请先在设置页面配置 API Key');
+      return;
+    }
+
     setLoading(true);
     setResults([]);
     toast.info('开始生成图片...');
@@ -266,7 +279,8 @@ export default function Home() {
       const body = {
         model: selectedModel,
         input: { messages: [{ role: "user", content }] },
-        parameters: { n: numImages, negative_prompt: negativePrompt || undefined, watermark }
+        parameters: { n: numImages, negative_prompt: negativePrompt || undefined, watermark },
+        apiKey // 传递 API Key
       };
 
       const res = await fetch('/api/generate', {
